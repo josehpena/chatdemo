@@ -8,6 +8,7 @@ const session = require('express-session')
 const MongoStore = require('connect-mongo')(session)
 
 var index = require('./routes/index');
+const users = require('./routes/users')
 var app = express();
 
 // view engine setup
@@ -37,6 +38,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use('/', index);
+app.use('/users', users)
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
