@@ -22,4 +22,15 @@ router.post('/signup', (req, res, next) => {
   })
 })
 
+router.get('/forgot', (req, res, next) => {
+  db.findUser(req.body.email, (err, doc) => {
+    if (err || !doc) res.redirect('/')//manda pro login mesmo que não ache
+    const newpass = require('.../utils').generatePassowrd()
+    db.changePassword(req.body.email, newpass)
+    require('.../mail')(req.body, 'Sua nova senha do chat', 'Olá', + doc.username + ', sua nova senha é ' + newpass)
+    res.redirect('/')
+  })
+})
+
+
 module.exports = router;

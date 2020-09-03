@@ -8,4 +8,13 @@ function createUser(username, password, email, callback) {
     })
 }
 
-module.exports = { createUser };
+function findUser(email, callback) {
+    global.db.collection("users").findOne({ email }, callback)
+}
+
+function changePassword(email, password) {
+    const cryptPwd = bcrypt.hashSync(password, 10)
+    global.db.collection("users").updateOne({ email }, { $set: { password: cryptPwd } })
+}
+
+module.exports = { createUser, findUser, changePassword };
