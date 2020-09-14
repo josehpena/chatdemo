@@ -15,21 +15,39 @@ router.get('/signup', function (req, res, next) {
 })
 
 router.post('/signup', (req, res, next) => {
-  db.createUser(req.body.username, req.body.password, req.body.email, (err, result) => {
-    if (err) res.redirect('/signup?fail=true')
-    require('../mail')(req.body.email, 'Bem vindo ao nosso chat', 'Olá ' + req.body.username + ', obrigado por se cadastrar! ')
-    res.redirect('/')
+  db.createUser(req.body.username, req.body.password, req.body.email, req.body.profile, (err, result) => {
+    if (err) res.redirect('users/signup?fail=true')
+    else {
+      var text = 'Obrigado por se cadastrar {fulano}, sua senha é {senha}';
+      text = text.replace('{fulano}', req.body.username).replace('{senha}', req.body.password);
+
+
+      require('../mail')(req.body.email, 'Cadastro realizado com sucesso!', text)
+      res.redirect('/')
+    }
   })
 })
 
-router.get('/forgot', (req, res, next) => {
-  db.findUser(req.body.email, (err, doc) => {
-    if (err || !doc) res.redirect('/')//manda pro login mesmo que não ache
-    const newpass = require('.../utils').generatePassowrd()
-    db.changePassword(req.body.email, newpass)
-    require('.../mail')(req.body, 'Sua nova senha do chat', 'Olá', + doc.username + ', sua nova senha é ' + newpass)
-    res.redirect('/')
+/* POST forgot */
+router.post('/forgot', function (req, res, next) {
+  const db = require('../db');
+  db.resetPassword(req.body.email, (err, result, newPassword) => {
+    if (err) {
+      console.log(err);
+      return res.redirect('/login?reset=true');
+    }
+    else {
+      console.log(result);
+      var text = `Olá,sua nova senha é ${newPassword}. Sua senha antiga, não funciona mais!`;
+      require('../mail')(req.body.email, 'Sua senha foi alterada!', text);
+      res.redirect('/');
+    }
   })
+})
+
+/** GET forgot */
+router.get('/forgot', function (req, res, next) {
+  res.render('forgot', {});
 })
 
 

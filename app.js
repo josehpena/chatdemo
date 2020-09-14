@@ -1,28 +1,30 @@
-var express = require('express');
-var path = require('path');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
 const passport = require('passport')
 const session = require('express-session')
 const MongoStore = require('connect-mongo')(session)
 
-var index = require('./routes/index');
-const users = require('./routes/users')
+var createError = require('http-errors');
+var express = require('express');
+var path = require('path');
+var cookieParser = require('cookie-parser');
+var logger = require('morgan');
+
+global.authenticationMiddleware = () => {
+  return function (req, res, next) {
+    if (req.isAuthenticated() && require("./permissions")(req))
+      return next()
+    res.redirect('/login?fail=true')
+  }
+}
+
+var indexRouter = require('./routes/index');
+var usersRouter = require('./routes/users');
+var loginRouter = require('./routes/login');
+var reportsRouter = require('./routes/reports');
+var chatRouter = require('./routes/chat');
+
 var app = express();
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
-
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
-
-app.use(express.static(path.join(__dirname, 'public')));
+//autenticação
 require('./auth')(passport);
 app.use(session({
   store: new MongoStore({
@@ -30,21 +32,32 @@ app.use(session({
     ttl: 30 * 60 // = 30 minutos de sessão
     , url: 'mongodb://localhost:27017/demo'
   }),
-  secret: '123',//configure um segredo seu aqui
+  secret: process.env.MONGO_STORE_SECRET,//configure um segredo seu aqui
   resave: false,
   saveUninitialized: false
 }))
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use('/', index);
-app.use('/users', users)
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
+app.use(logger('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/', loginRouter);
+app.use('/index', indexRouter);
+app.use('/users', usersRouter);
+app.use('/reports', reportsRouter);
+app.use('/chat', chatRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  next(err);
+  next(createError(404));
 });
 
 // error handler

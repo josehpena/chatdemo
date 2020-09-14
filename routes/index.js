@@ -1,34 +1,19 @@
 var express = require('express');
 var router = express.Router();
-const passport = require('passport');
-const { route } = require('../app');
+var db = require("../db");
 
-function authenticationMiddleware() {
-  return function (req, res, next) {
-    if (req.isAuthenticated()) {
-      return next()
-    }
-    res.redirect('/login?fail=true')
-  }
-}
 /* GET home page. */
-router.get('/', function (req, res, next) {
-  res.render('login', { message: null });
-});
+router.get('/:pagina?', global.authenticationMiddleware(), function (req, res, next) {
+  const pagina = parseInt(req.params.pagina || "1");
+  db.countAll((err, qtd) => {
+    if (err) return console.log(err);
+    const qtdPaginas = Math.ceil(qtd / db.TAMANHO_PAGINA);
 
-router.get('/chat', authenticationMiddleware(), function (req, res) {
-  res.render('chat', { username: req.user.username });
+    db.findAllUsers(pagina, (err, docs) => {
+      if (err) return console.log(err);
+      res.render('index', { title: req.user.username, docs, qtd, qtdPaginas, pagina, profile: req.user.profile });
+    })
+  })
 });
-
-router.get('/login', () => {
-  if (req.query.fail)
-    res.render('login', { message: 'Usuário e/ou senha incorretos!' });
-  else
-    res.render('login', { message: null });
-});
-
-router.post('/login',
-  passport.authenticate('local', { successRedirect: '/chat', failureRedirect: '/login?fail=true' })
-);
 
 module.exports = router;
